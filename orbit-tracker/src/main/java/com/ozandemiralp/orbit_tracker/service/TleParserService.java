@@ -28,7 +28,7 @@ public class TleParserService {
 
     public SatelliteDTO findSatelliteByName(List<SatelliteDTO> list, String name){
         return list.stream()
-                .filter(s -> s.name().toUpperCase().contains(name.toUpperCase()))
+                .filter(s -> s.satelliteName().toUpperCase().contains(name.toUpperCase()))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Satellite not found" + name));
     }
