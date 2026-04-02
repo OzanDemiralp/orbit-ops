@@ -3,34 +3,33 @@ package com.ozandemiralp.orbit_tracker.service;
 import com.ozandemiralp.orbit_tracker.dto.SatelliteDTO;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class TleParserService {
 
-    public List<SatelliteDTO> parseTleResponse(String rawTle){
-        List<SatelliteDTO> satellites = new ArrayList<>();
-
+    public Map<String, SatelliteDTO> parseTleToMap(String rawTle) {
+        Map<String, SatelliteDTO> satelliteMap = new HashMap<>();
         String[] lines = rawTle.split("\\r?\\n");
 
-        for (int i = 0; i < lines.length; i++) {
-            if(i + 2 < lines.length){
+        for (int i = 0; i < lines.length; i += 3) {
+            if (i + 2 < lines.length) {
                 String name = lines[i].trim();
                 String line1 = lines[i+1];
                 String line2 = lines[i+2];
 
-                satellites.add(new SatelliteDTO(name, line1, line2));
+                satelliteMap.put(name.toUpperCase(), new SatelliteDTO(name, line1, line2));
             }
         }
-        return satellites;
+        return satelliteMap;
     }
 
-    public SatelliteDTO findSatelliteByName(List<SatelliteDTO> list, String name){
-        return list.stream()
-                .filter(s -> s.satelliteName().toUpperCase().contains(name.toUpperCase()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Satellite not found" + name));
+    public SatelliteDTO findSatelliteInMap(Map<String, SatelliteDTO> map, String name) {
+        SatelliteDTO found = map.get(name.toUpperCase());
+        if (found == null) {
+            throw new RuntimeException("Satellite not found: " + name);
+        }
+        return found;
     }
 }
-
