@@ -47,25 +47,29 @@ public class OrbitService {
 
     public Mono<List<SatelliteCurrentPositionResponseDTO>> getTrajectory(SatelliteCurrentPositionRequestDTO request) {
         return tleCacheService.getSatelliteMap(request.satelliteGroup())
-                .publishOn(Schedulers.boundedElastic())
-                .map(satelliteMap -> {
-                    SatelliteDTO target = findInMap(satelliteMap, request.satelliteName());
-                    TLEPropagator propagator = TLEPropagator.selectExtrapolator(new TLE(target.tleLine1(), target.tleLine2()));
+                .flatMap(satelliteMap ->
+                        Mono.fromCallable(() -> {
+                            SatelliteDTO target = findInMap(satelliteMap, request.satelliteName());
+                            TLEPropagator propagator = TLEPropagator.selectExtrapolator(
+                                    new TLE(target.tleLine1(), target.tleLine2())
+                            );
 
-                    double period = propagator.getInitialState().getOrbit().getKeplerianPeriod();
-                    double duration = Math.min(period, 86400.0);
-                    int steps = 100;
-                    double stepSize = duration / steps;
+                            double period = propagator.getInitialState().getOrbit().getKeplerianPeriod();
+                            double duration = Math.min(period, 86400.0);
+                            int steps = 100;
+                            double stepSize = duration / steps;
 
-                    List<SatelliteCurrentPositionResponseDTO> trajectory = new ArrayList<>();
-                    AbsoluteDate startDate = new AbsoluteDate(new Date(), TimeScalesFactory.getUTC());
+                            List<SatelliteCurrentPositionResponseDTO> trajectory = new ArrayList<>();
+                            AbsoluteDate startDate = new AbsoluteDate(new Date(), TimeScalesFactory.getUTC());
 
-                    for (int i = 0; i <= steps; i++) {
-                        AbsoluteDate targetDate = startDate.shiftedBy(i * stepSize);
-                        trajectory.add(calculatePositionAtDate(propagator, targetDate));
-                    }
-                    return trajectory;
-                });
+                            for (int i = 0; i <= steps; i++) {
+                                AbsoluteDate targetDate = startDate.shiftedBy(i * stepSize);
+                                trajectory.add(calculatePositionAtDate(propagator, targetDate));
+                            }
+
+                            return trajectory;
+                        }).subscribeOn(Schedulers.parallel())
+                );
     }
 
     private SatelliteDTO findInMap(Map<String, SatelliteDTO> map, String name) {

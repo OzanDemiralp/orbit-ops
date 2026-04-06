@@ -1,6 +1,5 @@
 package com.ozandemiralp.orbit_tracker.client;
 
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -14,7 +13,6 @@ public class CelestrakClient {
         this.webClient = webClient;
     }
 
-    @Cacheable(value = "tleCache")
     public Mono<String> getTleDataByGroup(String group) {
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder

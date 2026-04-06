@@ -24,12 +24,4 @@ public class TleParserService {
         }
         return satelliteMap;
     }
-
-    public SatelliteDTO findSatelliteInMap(Map<String, SatelliteDTO> map, String name) {
-        SatelliteDTO found = map.get(name.toUpperCase());
-        if (found == null) {
-            throw new RuntimeException("Satellite not found: " + name);
-        }
-        return found;
-    }
 }
