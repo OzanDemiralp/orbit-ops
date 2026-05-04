@@ -73,7 +73,7 @@ http://localhost:8080/swagger-ui.html
 ### Windows
 
 ```bash
-mvnw.cmd test
+.\mvnw.cmd test
 ```
 
 ### macOS/Linux

@@ -76,7 +76,7 @@ public class OrbitService {
         return foundTLE;
     }
 
-    private SatelliteCurrentPositionResponseDTO calculatePositionAtDate(TLEPropagator propagator, AbsoluteDate date) {
+    SatelliteCurrentPositionResponseDTO calculatePositionAtDate(TLEPropagator propagator, AbsoluteDate date) {
         SpacecraftState currentState = propagator.propagate(date);
 
         StaticTransform transform = teme.getStaticTransformTo(itrf, date);
