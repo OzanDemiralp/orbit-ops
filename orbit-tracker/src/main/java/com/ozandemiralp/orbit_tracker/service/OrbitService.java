@@ -2,7 +2,6 @@ package com.ozandemiralp.orbit_tracker.service;
 
 import com.ozandemiralp.orbit_tracker.dto.SatelliteCurrentPositionRequestDTO;
 import com.ozandemiralp.orbit_tracker.dto.SatelliteCurrentPositionResponseDTO;
-import com.ozandemiralp.orbit_tracker.dto.SatelliteDTO;
 import lombok.AllArgsConstructor;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -33,36 +32,35 @@ public class OrbitService {
     private final Frame itrf;
     private final Frame teme;
     private final BodyShape earth;
+    private final int DEFAULT_STEPS = 100;
+    private final double MAX_DURATION_SECONDS = 864000;
 
     public Mono<SatelliteCurrentPositionResponseDTO> getCurrentSatellitePosition(SatelliteCurrentPositionRequestDTO request) {
         return tleCacheService.getSatelliteMap(request.satelliteGroup())
-                .publishOn(Schedulers.boundedElastic())
-                .map(satelliteMap -> {
-                    SatelliteDTO target = findInMap(satelliteMap, request.satelliteName());
-                    TLEPropagator propagator = TLEPropagator.selectExtrapolator(new TLE(target.tleLine1(), target.tleLine2()));
+                .flatMap(satelliteMap ->
+                        Mono.fromCallable(() -> {
+                            TLE targetTLE = findInMap(satelliteMap, request.satelliteName());
+                            TLEPropagator propagator = TLEPropagator.selectExtrapolator(targetTLE);
 
-                    AbsoluteDate currentDate = new AbsoluteDate(new Date(), TimeScalesFactory.getUTC());
-                    return calculatePositionAtDate(propagator, currentDate);
-                });    }
+                            AbsoluteDate currentDate = new AbsoluteDate(new Date(), TimeScalesFactory.getUTC());
+                            return calculatePositionAtDate(propagator, currentDate);
+                        }).subscribeOn(Schedulers.parallel())
+                );
+    }
 
     public Mono<List<SatelliteCurrentPositionResponseDTO>> getTrajectory(SatelliteCurrentPositionRequestDTO request) {
         return tleCacheService.getSatelliteMap(request.satelliteGroup())
                 .flatMap(satelliteMap ->
                         Mono.fromCallable(() -> {
-                            SatelliteDTO target = findInMap(satelliteMap, request.satelliteName());
-                            TLEPropagator propagator = TLEPropagator.selectExtrapolator(
-                                    new TLE(target.tleLine1(), target.tleLine2())
-                            );
+                    TLE targetTLE = findInMap(satelliteMap, request.satelliteName());
+                    TLEPropagator propagator = TLEPropagator.selectExtrapolator(targetTLE);
 
-                            double period = propagator.getInitialState().getOrbit().getKeplerianPeriod();
-                            double duration = Math.min(period, 86400.0);
-                            int steps = 100;
-                            double stepSize = duration / steps;
+                            double stepSize = MAX_DURATION_SECONDS / DEFAULT_STEPS;
 
-                            List<SatelliteCurrentPositionResponseDTO> trajectory = new ArrayList<>();
+                            List<SatelliteCurrentPositionResponseDTO> trajectory = new ArrayList<>(DEFAULT_STEPS + 1);
                             AbsoluteDate startDate = new AbsoluteDate(new Date(), TimeScalesFactory.getUTC());
 
-                            for (int i = 0; i <= steps; i++) {
+                            for (int i = 0; i <= DEFAULT_STEPS; i++) {
                                 AbsoluteDate targetDate = startDate.shiftedBy(i * stepSize);
                                 trajectory.add(calculatePositionAtDate(propagator, targetDate));
                             }
@@ -72,10 +70,10 @@ public class OrbitService {
                 );
     }
 
-    private SatelliteDTO findInMap(Map<String, SatelliteDTO> map, String name) {
-        SatelliteDTO found = map.get(name.toUpperCase());
-        if (found == null) throw new RuntimeException("Satellite not found: " + name);
-        return found;
+    private TLE findInMap(Map<String, TLE> map, String name) {
+        TLE foundTLE = map.get(name.toUpperCase());
+        if (foundTLE == null) throw new RuntimeException("Satellite not found: " + name);
+        return foundTLE;
     }
 
     private SatelliteCurrentPositionResponseDTO calculatePositionAtDate(TLEPropagator propagator, AbsoluteDate date) {
