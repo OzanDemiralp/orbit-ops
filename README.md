@@ -1,54 +1,129 @@
-# Orbit Tracker
+# orbit-tracker
 
-A small reactive service for satellite position calculation.
+Reactive backend service for satellite position and trajectory calculations.
 
-This project is a work-in-progress backend service that calculates satellite coordinates and trajectories using CelesTrak data. It uses the Orekit library for orbital mechanics and is built on a reactive stack.
+The service fetches TLE data from CelesTrak, parses and caches it, then uses Orekit for orbital propagation and Earth frame transformations.
+
+## Tech Stack
+
+- Java 21
+- Spring Boot 4 (WebFlux)
+- Project Reactor
+- Orekit
+- Lombok
 
 ## Features
 
-* Reactive Stack: Built with Spring WebFlux and Project Reactor for non-blocking operations.
+- Reactive API endpoints with Spring WebFlux.
+- TLE retrieval from CelesTrak.
+- In-memory TLE cache with 90-minute TTL.
+- Position calculation in geodetic coordinates (lat/lon/alt).
+- Trajectory generation over one orbital period (capped at 24h).
 
-* Orbital Calculation: Uses Orekit for satellite propagation and coordinate transformations.
+## Technical Notes
 
-* Caching: TLE data is cached for 90 minutes to minimize external API calls.
+- Reference frame transformation: TEME -> ITRF.
+- Earth model is configured as singleton Spring beans.
+- Cache uses `ConcurrentHashMap` + Reactor `Mono.cache(Duration)`.
 
-* Async Processing: Heavy calculations are handled on background threads to maintain responsiveness.
+## Prerequisites
 
-### Technical Details
-* Reference Frames: Handles transformations between TEME (TLE default) and ITRF (Geodetic) frames.
+- JDK 21 installed and active in your terminal.
 
-* Resource Management: Frames and Earth models are initialized as Singleton Beans to avoid unnecessary object creation.
-
-* Concurrency: Uses ConcurrentHashMap and Mono.cache for basic thread-safe caching of processed data.
-
-### Tech Stack
-* Java 17
-
-* Spring Boot 3
-
-* Orekit
-
-* Lombok
-
-### Current Endpoints
+Check Java version:
 
 ```bash
-POST /api/v1/satellites/satellitePosition 
+java -version
 ```
-Returns current latitude, longitude, and altitude for a specific satellite.
+
+## Run Locally
+
+From the nested project directory:
 
 ```bash
-POST /api/v1/satellites/trajectory 
+cd orbit-tracker
 ```
-Returns a list of 100 points representing the satellite's path over one orbital period.
 
-### Status
-[x] Basic TLE client and caching.
+### Windows
 
-[x] Position and trajectory calculation logic.
+```bash
+mvnw.cmd spring-boot:run
+```
 
-[x] Reactive thread management.
+### macOS/Linux
 
-[ ] Unit and integration tests.
+```bash
+./mvnw spring-boot:run
+```
 
-[ ] Frontend integration with Resium.
+App default URL:
+
+```text
+http://localhost:8080
+```
+
+OpenAPI UI:
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+## Tests
+
+### Windows
+
+```bash
+mvnw.cmd test
+```
+
+### macOS/Linux
+
+```bash
+./mvnw test
+```
+
+## API
+
+Base path:
+
+```text
+/api/v1/satellites
+```
+
+### Get Current Position
+
+```text
+POST /api/v1/satellites/satellitePosition
+```
+
+Request body:
+
+```json
+{
+  "satelliteGroup": "active",
+  "satelliteName": "ISS (ZARYA)"
+}
+```
+
+Response fields:
+
+- `timestamp`
+- `latitude`
+- `longitude`
+- `altitude`
+- `velocity`
+
+### Get Trajectory
+
+```text
+POST /api/v1/satellites/trajectory
+```
+
+Uses the same request body and returns a list of sampled position points.
+
+## Current Status
+
+- Done: TLE client + parser + cache.
+- Done: Position and trajectory calculations.
+- Done: Reactive processing model.
+- In progress: Unit and integration tests.

@@ -18,11 +18,12 @@ public class TleCacheService {
     private final CelestrakClient celestrakClient;
     private final TleParserService tleParserService;
 
+    private final Map<String, Mono<Map<String, TLE>>> internalCache = new ConcurrentHashMap<>();
 
-    public Mono<Map<String, SatelliteDTO>> getSatelliteMap(String group) {
+    public Mono<Map<String, TLE>> getSatelliteMap(String group) {
         return internalCache.computeIfAbsent(group, g ->
                 celestrakClient.getTleDataByGroup(g)
-                        .publishOn(Schedulers.boundedElastic())
+                        .subscribeOn(Schedulers.boundedElastic())
                         .map(tleParserService::parseTleToMap)
                         .cache(Duration.ofMinutes(90))
         );

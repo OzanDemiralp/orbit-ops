@@ -11,8 +11,8 @@
 	<groupId>com.ozandemiralp</groupId>
 	<artifactId>orbit-tracker</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>orbit-ops</name>
-	<description>Demo project for Spring Boot</description>
+	<name>orbit-tracker</name>
+	<description>Reactive backend service for satellite position and trajectory calculations</description>
 	<url/>
 	<licenses>
 		<license/>
